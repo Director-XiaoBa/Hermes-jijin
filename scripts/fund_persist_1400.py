@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-14:00扫描持久化 — 三层保存
+14:00扫描持久化 — 两层保存
 Layer 1: MySQL scan_recommendations表（结构化数据，可查询）
 Layer 2: 文件归档 ~/fund-reports/1400/YYYY-MM-DD/report.md（完整报告）
-Layer 3: 决策日志 ~/user_files/documents/基金决策日志.md（追加记录）
+
 
 用法:
     python3 fund_persist_1400.py                    # 自动读取最新数据
@@ -24,8 +24,6 @@ DB_CONFIG = {
 }
 
 REPORT_ARCHIVE = os.path.expanduser("~/fund-reports/1400")
-DECISION_LOG = os.path.expanduser("~/user_files/documents/基金决策日志.md")
-
 def get_connection():
     return pymysql.connect(**DB_CONFIG)
 
@@ -107,21 +105,6 @@ def save_report_archive(scan_date, report_content):
     
     return report_path
 
-def append_decision_log(scan_time, recommendation, confidence):
-    """Layer 3: 决策日志"""
-    entry = f"\n\n---\n## {scan_time} 盘中扫描\n"
-    entry += f"- 建议: {recommendation}\n"
-    entry += f"- 置信度: {confidence}/5\n"
-    entry += "- 状态: 扫描完成，报告已推送\n"
-    
-    try:
-        with open(DECISION_LOG, 'a', encoding='utf-8') as f:
-            f.write(entry)
-        return True
-    except Exception as e:
-        print(f"  决策日志写入失败: {e}", file=sys.stderr)
-        return False
-
 def parse_analysis_from_report(report_path):
     """从报告中解析分析数据"""
     timing = {'trend': 0, 'event': 0, 'streak': 0, 'us': 0, 'score': 0}
@@ -185,7 +168,7 @@ def main():
     scan_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     scan_date = date.today().isoformat()
     
-    print(f"[{scan_time}] 三层持久化开始...")
+    print(f"[{scan_time}] 两层持久化开始...")
     
     # 加载数据
     data = load_scan_data()
@@ -220,11 +203,8 @@ def main():
     else:
         print("  ⚠️ 无报告文件，跳过归档")
     
-    # Layer 3: 决策日志
-    log_ok = append_decision_log(scan_time, recommendation, confidence)
-    print(f"  {'✅' if log_ok else '❌'} 决策日志")
     
-    print(f"[{scan_time}] 三层持久化完成")
+    print(f"[{scan_time}] 两层持久化完成")
 
 if __name__ == "__main__":
     main()
