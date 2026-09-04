@@ -89,7 +89,24 @@ def main():
         print(f"[{collected_at}] 信号评分完成: {elapsed_signal}s, "
               f"高质量信号{len(signals)}条", file=sys.stderr)
 
-    # 输出最终JSON到stdout
+    # Phase 3: 生成半成品报告 + LLM分析输入
+    print(f"[{collected_at}] 生成报告数据...", file=sys.stderr)
+    t2 = time.time()
+    report_out, rc = run_script("fund_report_data.py", timeout=10)
+    elapsed_report = round(time.time() - t2, 2)
+    print(f"[{collected_at}] 报告数据生成完成: {elapsed_report}s", file=sys.stderr)
+
+    # 读取LLM分析输入（注入给agent）
+    llm_input_path = "/tmp/fund_data/llm_analysis_input.md"
+    llm_input = ""
+    if os.path.exists(llm_input_path):
+        with open(llm_input_path, encoding='utf-8') as f:
+            llm_input = f.read()
+
+    # 输出：先输出LLM分析输入（agent直接读），再输出JSON
+    print("=== LLM分析输入 ===")
+    print(llm_input)
+    print("\n=== 原始数据JSON ===")
     print(json.dumps(output, ensure_ascii=False, indent=2))
 
 if __name__ == "__main__":
