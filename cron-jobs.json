@@ -148,7 +148,7 @@
     },
     {
       "name": "基金14点方向扫描-v2.0完整输出",
-      "prompt": "脚本已生成半成品报告（数据部分已填好）和分析输入。你需要完成分析并输出完整报告。\n\n## 你的任务\n\n### 第1步：读取半成品报告\n读取文件 /tmp/fund_data/report_data.md，这是已经填好数据的报告（第7+8章是占位符）。\n\n### 第2步：完成分析\n读取脚本输出中\"=== LLM分析输入 ===\"部分，基于快讯、事件、持仓数据完成：\n\n**催化剂分析**：近期重大事件、对哪些板块有影响、突发利好/利空、时间窗口\n\n**操作建议**：大盘趋势、持仓调整、买卖机会、时机检查（大阳线日？重大事件前夜？连涨>=3天？美股隔夜大涨？必须4项全部通过才给买入建议）\n\n### 第3步：组装完整报告\n把你的分析结果替换半成品报告中的占位符\"⚠️ 待LLM分析填充\"，输出完整报告。\n\n## 输出格式\n\n输出完整的10章节报告，不要省略任何章节。",
+      "prompt": "脚本已生成半成品报告（数据部分已填好）和分析输入。你需要完成分析并输出完整报告。\n\n## 你的任务\n\n### 第1步：读取半成品报告\n读取文件 /tmp/fund_data/report_data.md，这是已经填好数据的报告（第7+8章是占位符）。\n\n### 第2步：完成分析\n读取脚本输出中\"=== LLM分析输入 ===\"部分，基于快讯、事件、持仓数据完成：\n\n**催化剂分析**：近期有哪些重大事件？对哪些板块有影响？突发利好/利空？\n\n**操作建议**：回答3个问题——\n\n问题1: 现在有危险信号吗？\n- 重大事件今晚公布（非农/CPI/FOMC等）？→ 等结果再买\n- 市场单日跌>3%？→ 等企稳\n- 北向资金大幅流出>50亿？→ 观望\n→ 任一触发 = 不买，等一等\n\n问题2: 有买的理由吗？\n- 有明确的催化剂？（政策/事件/数据）\n- 目标基金方向和催化剂匹配？\n→ 有理由 = 可以考虑，没理由 = 不买\n\n问题3: 买多少？\n- 催化剂+无危险 = 30%仓位\n- 催化剂+小风险 = 10%仓位\n- 无催化剂 = 0%（观望）\n\n### 第3步：组装完整报告\n把你的分析结果替换半成品报告中的占位符\"⚠️ 待LLM分析填充\"，输出完整报告。\n\n## 输出格式\n\n输出完整的10章节报告，不要省略任何章节。",
       "skills": [],
       "skill": null,
       "model": "mimo-v2.5",
@@ -165,18 +165,18 @@
       "schedule_display": "0 14 * * 1-5",
       "repeat": {
         "times": null,
-        "completed": 58
+        "completed": 59
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-07-07T10:13:58.646291+08:00",
-      "next_run_at": "2026-09-04T14:00:00+08:00",
-      "last_run_at": "2026-09-03T14:05:33.773566+08:00",
+      "next_run_at": "2026-09-07T14:00:00+08:00",
+      "last_run_at": "2026-09-04T14:02:47.540401+08:00",
       "last_status": "ok",
       "last_error": null,
-      "last_delivery_error": "live adapter send failed: iLink sendmessage rate limited; cooldown active for 30.0s; live adapter delivery to weixin:o9cq80z9JC1Ln5n8-q5HhY83hVlc@im.wechat failed: iLink sendmessage rate limited; cooldown active for 30.0s; delivery error: Weixin send failed: iLink sendmessage rate limited; cooldown active for 30.0s",
+      "last_delivery_error": null,
       "deliver": "origin",
       "enabled_toolsets": [
         "terminal",
@@ -247,15 +247,15 @@
       "schedule_display": "20 14 * * 1-5",
       "repeat": {
         "times": null,
-        "completed": 8
+        "completed": 9
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-08-25T10:48:10.786261+08:00",
-      "next_run_at": "2026-09-04T14:20:00+08:00",
-      "last_run_at": "2026-09-03T14:22:35.943398+08:00",
+      "next_run_at": "2026-09-07T14:20:00+08:00",
+      "last_run_at": "2026-09-04T14:22:14.819246+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -640,5 +640,5 @@
       "workdir": null
     }
   ],
-  "updated_at": "2026-09-04T10:09:52.930659+08:00"
+  "updated_at": "2026-09-04T14:22:14.819940+08:00"
 }

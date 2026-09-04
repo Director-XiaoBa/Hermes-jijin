@@ -58,8 +58,9 @@ def extract_market_snapshot(data):
     
     return snapshot
 
-def save_to_mysql(scan_time, snapshot, timing_check, recommendation, 
-                  confidence, reasoning, catalyst_summary, signal_count):
+def save_to_mysql(scan_time, snapshot, danger_signal, has_catalyst, 
+                  position_pct, recommendation, confidence, reasoning, 
+                  catalyst_summary, signal_count):
     """Layer 1: 写入MySQL"""
     conn = get_connection()
     try:
@@ -69,20 +70,18 @@ def save_to_mysql(scan_time, snapshot, timing_check, recommendation,
                 (scan_date, scan_time, scan_type,
                  sh_index, sh_change_pct, sz_index, sz_change_pct,
                  kc_index, kc_change_pct,
-                 timing_trend_ok, timing_event_ok, timing_streak_ok, timing_us_ok,
-                 timing_score, recommendation, confidence, reasoning,
+                 danger_signal, has_catalyst, position_pct,
+                 recommendation, confidence, reasoning,
                  catalyst_summary, signal_count, data_sources_ok)
                 VALUES (%s, %s, '1400',
                         %s, %s, %s, %s, %s, %s,
-                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 date.today(), scan_time,
                 snapshot.get('sh_index'), snapshot.get('sh_change_pct'),
                 snapshot.get('sz_index'), snapshot.get('sz_change_pct'),
                 snapshot.get('kc_index'), snapshot.get('kc_change_pct'),
-                timing_check.get('trend', 0), timing_check.get('event', 0),
-                timing_check.get('streak', 0), timing_check.get('us', 0),
-                timing_check.get('score', 0),
+                danger_signal, has_catalyst, position_pct,
                 recommendation, confidence, reasoning,
                 catalyst_summary, signal_count, snapshot.get('data_sources_ok', 0)
             ))
@@ -106,38 +105,44 @@ def save_report_archive(scan_date, report_content):
     return report_path
 
 def parse_analysis_from_report(report_path):
-    """从报告中解析分析数据"""
-    timing = {'trend': 0, 'event': 0, 'streak': 0, 'us': 0, 'score': 0}
+    """从报告中解析3问题框架的分析数据"""
+    danger_signal = 0
+    has_catalyst = 0
+    position_pct = 0
     recommendation = 'watch'
     confidence = 3
     reasoning = ''
     catalyst_summary = ''
     
     if not os.path.exists(report_path):
-        return timing, recommendation, confidence, reasoning, catalyst_summary
+        return danger_signal, has_catalyst, position_pct, recommendation, confidence, reasoning, catalyst_summary
     
     with open(report_path, encoding='utf-8') as f:
         content = f.read()
     
-    # 解析时机检查
-    if '✅ 通过' in content and '大盘趋势' in content:
-        timing['trend'] = 1
-    if '✅ 通过' in content and '重大事件' in content:
-        timing['event'] = 1
-    if '✅ 通过' in content and '连涨' in content:
-        timing['streak'] = 1
-    if '✅ 通过' in content and '美股' in content:
-        timing['us'] = 1
-    timing['score'] = timing['trend'] + timing['event'] + timing['streak'] + timing['us']
+    # 解析3问题框架
+    # 问题1: 危险信号
+    danger_keywords = ['危险信号', '不买', '等一等', '等结果', '观望', '等企稳']
+    if any(kw in content for kw in danger_keywords):
+        danger_signal = 1
+    
+    # 问题2: 有催化剂
+    if '有催化剂' in content or '有理由' in content or '可以买' in content or '可以考虑' in content:
+        has_catalyst = 1
+    
+    # 问题3: 仓位比例
+    if '30%' in content or '30%仓位' in content:
+        position_pct = 30
+    elif '10%' in content or '10%仓位' in content:
+        position_pct = 10
+    else:
+        position_pct = 0
     
     # 解析建议
-    if '买入' in content or 'buy' in content.lower():
+    if position_pct > 0 and danger_signal == 0:
         recommendation = 'buy'
-        confidence = 4
-    elif '观望' in content or 'hold' in content.lower():
-        recommendation = 'hold'
-        confidence = 3
-    elif '谨慎' in content or 'cautious' in content.lower():
+        confidence = 4 if position_pct >= 30 else 3
+    elif danger_signal == 1:
         recommendation = 'cautious'
         confidence = 2
     else:
@@ -156,7 +161,7 @@ def parse_analysis_from_report(report_path):
         end = content.index('---', start) if '---' in content[start:] else len(content)
         reasoning = content[start:end].strip()[:500]
     
-    return timing, recommendation, confidence, reasoning, catalyst_summary
+    return danger_signal, has_catalyst, position_pct, recommendation, confidence, reasoning, catalyst_summary
 
 def main():
     report_path = None
@@ -184,16 +189,17 @@ def main():
         if os.path.exists(default_report):
             report_path = default_report
     
-    # 解析分析数据
-    timing, recommendation, confidence, reasoning, catalyst_summary = parse_analysis_from_report(report_path)
+    # 解析分析数据（3问题框架）
+    danger_signal, has_catalyst, position_pct, recommendation, confidence, reasoning, catalyst_summary = parse_analysis_from_report(report_path)
     
     # 统计信号数
     signals = data.get('signals', [])
     signal_count = len(signals)
     
     # Layer 1: MySQL
-    mysql_ok = save_to_mysql(scan_time, snapshot, timing, recommendation,
-                             confidence, reasoning, catalyst_summary, signal_count)
+    mysql_ok = save_to_mysql(scan_time, snapshot, danger_signal, has_catalyst,
+                             position_pct, recommendation, confidence, reasoning,
+                             catalyst_summary, signal_count)
     print(f"  {'✅' if mysql_ok else '❌'} MySQL: scan_recommendations")
     
     # Layer 2: 文件归档

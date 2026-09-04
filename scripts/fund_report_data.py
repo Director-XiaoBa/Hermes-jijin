@@ -214,7 +214,27 @@ def main():
 """
 
     # 同时输出供LLM分析的辅助数据
+    # 提取关键数据用于3问题判断
+    indices = data.get('indices_holdings', {}).get('data', {}).get('indices', [])
+    north = data.get('north_flow', {}).get('data', {})
+    north_latest = north.get('latest', {})
+    
+    # 市场状态摘要
+    market_summary = []
+    for idx in indices:
+        market_summary.append(f"- {idx['name']}: {idx['price']} ({idx['pct']:+.2f}%)")
+    market_str = "\n".join(market_summary) if market_summary else "无指数数据"
+    
+    # 北向资金摘要
+    north_str = f"最近: {north_latest.get('date','')} 净流入{north_latest.get('netflow_yi',0)}亿" if north_latest else "无北向数据"
+    
     llm_context = f"""## 供LLM分析的辅助数据
+
+### 市场状态（用于判断危险信号）
+{market_str}
+
+### 北向资金（用于判断流动性风险）
+{north_str}
 
 ### 快讯摘要（最近10条）
 {build_news_summary(data)}
@@ -222,12 +242,15 @@ def main():
 ### 持仓详情
 {build_holdings_detail(data)}
 
-### 事件列表
+### 事件列表（用于判断重大事件临近）
 {build_section6_events(data)}
 
 ### 需要LLM完成的分析：
 1. **催化剂分析**（第7章）：基于快讯+事件，分析当前市场的核心催化剂
-2. **操作建议**（第8章）：基于以上所有数据，给出买入/卖出/持有的建议和理由
+2. **操作建议**（第8章）：回答3个问题——
+   问题1: 现在有危险信号吗？（重大事件今晚？市场跌>3%？北向流出>50亿？）
+   问题2: 有买的理由吗？（有催化剂？方向匹配？）
+   问题3: 买多少？（催化剂+无风险=30%，有风险=10%，无催化剂=0%）
 
 请输出以下格式的分析结果（不要输出其他章节的内容）：
 
@@ -235,7 +258,7 @@ def main():
 [你的分析]
 
 ## 8. 操作建议
-[你的建议]
+[回答3个问题，给出建议和仓位比例]
 """
 
     # 保存半成品报告到文件（供assemble脚本读取）
