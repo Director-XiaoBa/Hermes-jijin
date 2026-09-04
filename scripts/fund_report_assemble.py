@@ -33,12 +33,14 @@ def extract_analysis(llm_text):
     buffer = []
 
     for line in lines:
-        if "催化剂分析" in line or "## 7" in line:
+        stripped = line.strip()
+        # 只匹配章节标题行（以##开头），不匹配内容行
+        if stripped.startswith("## 7") and "催化剂" in stripped:
             if current_section and buffer:
                 analysis[current_section] = "\n".join(buffer).strip()
             current_section = "catalyst"
             buffer = []
-        elif "操作建议" in line or "## 8" in line:
+        elif stripped.startswith("## 8") and "操作" in stripped:
             if current_section and buffer:
                 analysis[current_section] = "\n".join(buffer).strip()
             current_section = "recommendation"
@@ -76,13 +78,19 @@ def assemble(data_report, analysis):
             f"## 8. 操作建议\n{analysis['recommendation']}"
         )
 
-    # 如果占位符没被替换（LLM输出格式不匹配），追加到末尾
-    if placeholder in data_report:
-        data_report = data_report.replace(
-            placeholder,
-            (analysis.get("catalyst") or "分析未完成") + "\n\n" +
-            (analysis.get("recommendation") or "建议未生成")
-        )
+    # 精确替换每个章节的占位符（无fallback）
+    for section_name, key, header in [
+        ("catalyst", "catalyst", "## 7. 催化剂分析"),
+        ("recommendation", "recommendation", "## 8. 操作建议"),
+    ]:
+        value = analysis.get(key, "")
+        if value:
+            # 有内容：替换占位符
+            data_report = data_report.replace(
+                f"{header}\n{placeholder}",
+                f"{header}\n{value}"
+            )
+        # 没有内容：保留占位符不动
 
     return data_report
 
