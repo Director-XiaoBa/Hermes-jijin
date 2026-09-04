@@ -21,7 +21,7 @@ DB_CONFIG = {
     'host': '127.0.0.1',
     'port': 3306,
     'user': 'fund_admin',
-    'password': '<REDACTED>',
+    'password': 'FundR2026!db',
     'database': 'fund_research',
     'charset': 'utf8mb4',
 }
@@ -559,15 +559,15 @@ print("\n[4/6] 拉取行业板块...")
 sector_data = []
 for attempt in range(3):
     try:
-        raw = http("https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=30&po=1&np=1&fltt=2&invt=2&fid=f62&fs=m:90+t:2+f:!50&fields=f12,f14,f62,f184",
-                   {"Referer": "https://data.eastmoney.com/", "User-Agent": "Mozilla/5.0"}).decode('utf-8', 'ignore')
-        data = json.loads(raw)
-        items = data.get("data", {}).get("diff", [])
-        for item in items:
-            name = item.get("f14", "")
-            netflow = item.get("f62", 0)
-            if netflow is not None and name:
-                sector_data.append({'name': name, 'return': round(float(netflow) / 1e8, 2)})
+        raw = http("https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/MoneyFlow.ssl_bkzj_bk?page=1&num=30&sort=netamount&asc=0&fenlei=1",
+                   {"Referer": "https://finance.sina.com.cn/", "User-Agent": "Mozilla/5.0"}).decode('utf-8', 'ignore')
+        items = json.loads(raw)
+        if isinstance(items, list):
+            for item in items:
+                name = item.get("name", "")
+                netflow = float(item.get("netamount", 0)) / 1e8 if item.get("netamount") else 0
+                if name:
+                    sector_data.append({'name': name, 'return': round(netflow, 2)})
         break
     except Exception:
         if attempt < 2:
@@ -838,27 +838,26 @@ def fetch_with_retry(url, max_retries=3, delay=2):
                 time.sleep(delay)
     return None
 
-# 1. 板块资金流向（东财push2概念板块）
+# 1. 板块资金流向（新浪API，东财push2已封）
 try:
-    flow_url = "https://push2.eastmoney.com/api/qt/clist/get?pn=1&pz=50&po=1&np=1&fltt=2&invt=2&fid=f62&fs=m:90+t:2+f:!50&fields=f12,f14,f62,f184"
+    flow_url = "https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/MoneyFlow.ssl_bkzj_bk?page=1&num=50&sort=netamount&asc=0&fenlei=1"
     flow_raw = fetch_with_retry(flow_url)
     
     if flow_raw:
-        flow_data = json.loads(flow_raw) if isinstance(flow_raw, str) else flow_raw
-        items = flow_data.get("data", {}).get("diff", []) if isinstance(flow_data, dict) else []
+        items = flow_raw if isinstance(flow_raw, list) else []
         
         flow_conn = pymysql.connect(**DB_CONFIG)
         flow_cursor = flow_conn.cursor()
         
         for item in items:
             try:
-                sector_name = item.get('f14', '')
-                netamount = float(item.get('f62', 0)) / 1e8 if item.get('f62') else 0
+                sector_name = item.get('name', '')
+                netamount = float(item.get('netamount', 0)) / 1e8 if item.get('netamount') else 0
                 if not sector_name:
                     continue
-                # push2只提供主力净流入，没有分项数据
-                main_netflow = netamount
-                retail_netflow = 0  # 无散户数据
+                # 新浪API提供主力净流入和散户净流入
+                main_netflow = float(item.get('mainnetamount', 0)) / 1e8 if item.get('mainnetamount') else netamount
+                retail_netflow = float(item.get('retailnetamount', 0)) / 1e8 if item.get('retailnetamount') else 0
                 
                 flow_sql = """INSERT INTO sector_flow_daily 
                     (trade_date, sector_name, main_inflow, main_outflow, main_netflow,
@@ -869,9 +868,12 @@ try:
                         main_netflow=VALUES(main_netflow), retail_inflow=VALUES(retail_inflow),
                         retail_outflow=VALUES(retail_outflow), retail_netflow=VALUES(retail_netflow)"""
                 
+                # Sina API没有inamount/outflow，用netflow计算
+                inamount = max(0, main_netflow)
+                outamount = max(0, -main_netflow)
                 flow_cursor.execute(flow_sql, (
                     today, sector_name,
-                    round(inamount, 2), round(outamount, 2), round(netamount, 2),
+                    round(inamount, 2), round(outamount, 2), round(main_netflow, 2),
                     round(max(0, retail_netflow), 2), round(max(0, -retail_netflow), 2), round(retail_netflow, 2)
                 ))
                 flow_count += 1
@@ -888,8 +890,12 @@ try:
             if north_result and north_result.get('data'):
                 # 找北向合计（MUTUAL_TYPE=006）
                 for item in north_result['data']:
-                    if item.get('MUTUAL_TYPE') == '006' and item.get('NET_DEAL_AMT') is not None:
-                        net_amt = float(item['NET_DEAL_AMT']) / 10000  # 万→亿
+                    if item.get('MUTUAL_TYPE') == '006':
+                        net_amt_raw = item.get('NET_DEAL_AMT')
+                        if net_amt_raw is None:
+                            # 尝试其他字段
+                            net_amt_raw = item.get('NET_BUY_AMT') or item.get('BUY_AMT', 0)
+                        net_amt = float(net_amt_raw) / 10000 if net_amt_raw else 0  # 万→亿
                         is_inflow = 1 if net_amt > 0 else 0
                         
                         north_sql = """INSERT INTO north_flow_daily 
