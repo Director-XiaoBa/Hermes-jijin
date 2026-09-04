@@ -207,15 +207,15 @@
       "schedule_display": "40 14 * * 1-5",
       "repeat": {
         "times": null,
-        "completed": 22
+        "completed": 23
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-08-05T12:22:55.219063+08:00",
-      "next_run_at": "2026-09-04T14:40:00+08:00",
-      "last_run_at": "2026-09-03T14:41:15.808086+08:00",
+      "next_run_at": "2026-09-07T14:40:00+08:00",
+      "last_run_at": "2026-09-04T14:51:06.515449+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -247,7 +247,7 @@
       "schedule_display": "20 14 * * 1-5",
       "repeat": {
         "times": null,
-        "completed": 9
+        "completed": 10
       },
       "enabled": true,
       "state": "scheduled",
@@ -255,7 +255,7 @@
       "paused_reason": null,
       "created_at": "2026-08-25T10:48:10.786261+08:00",
       "next_run_at": "2026-09-07T14:20:00+08:00",
-      "last_run_at": "2026-09-04T14:22:14.819246+08:00",
+      "last_run_at": "2026-09-04T14:53:59.910519+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -284,15 +284,15 @@
       "schedule_display": "5 15 * * 1-5",
       "repeat": {
         "times": null,
-        "completed": 9
+        "completed": 10
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-08-25T17:59:48.582757+08:00",
-      "next_run_at": "2026-09-04T15:05:00+08:00",
-      "last_run_at": "2026-09-03T15:05:59.174646+08:00",
+      "next_run_at": "2026-09-07T15:05:00+08:00",
+      "last_run_at": "2026-09-04T15:06:23.312262+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -358,15 +358,15 @@
       "schedule_display": "10 16 * * 5",
       "repeat": {
         "times": null,
-        "completed": 1
+        "completed": 2
       },
       "enabled": true,
       "state": "scheduled",
       "paused_at": null,
       "paused_reason": null,
       "created_at": "2026-08-25T18:25:43.329611+08:00",
-      "next_run_at": "2026-09-04T16:10:00+08:00",
-      "last_run_at": "2026-08-28T16:00:39.735726+08:00",
+      "next_run_at": "2026-09-11T16:10:00+08:00",
+      "last_run_at": "2026-09-04T16:10:51.590964+08:00",
       "last_status": "ok",
       "last_error": null,
       "last_delivery_error": null,
@@ -638,7 +638,81 @@
       "deliver": "origin",
       "enabled_toolsets": null,
       "workdir": null
+    },
+    {
+      "name": "基金14:20机会发现",
+      "prompt": "执行以下步骤生成机会发现报告：\n\n第一步：采集板块资金流向\n运行命令采集当前板块数据：\n~/.hermes/venv-fund/bin/python3 ~/.hermes/scripts/fund_daily_pipeline_v2.py 2>&1 | tail -5\n\n第二步：计算板块动量\n运行命令计算动量指标：\n~/.hermes/venv-fund/bin/python3 ~/.hermes/scripts/sector_momentum.py\n\n第三步：生成机会报告\n运行命令生成报告：\n~/.hermes/venv-fund/bin/python3 ~/.hermes/scripts/opportunity_scan.py\n\n将脚本输出直接推送给用户，不需要额外解读。",
+      "skills": [],
+      "skill": null,
+      "model": null,
+      "provider": null,
+      "provider_snapshot": "xiaomi",
+      "model_snapshot": "mimo-v2.5",
+      "base_url": null,
+      "script": "fund_daily_pipeline_v2.py",
+      "no_agent": false,
+      "context_from": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "20 14 * * 1-5",
+        "display": "20 14 * * 1-5"
+      },
+      "schedule_display": "20 14 * * 1-5",
+      "repeat": {
+        "times": null,
+        "completed": 0
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-09-04T16:33:47.888378+08:00",
+      "next_run_at": "2026-09-07T14:20:00+08:00",
+      "last_run_at": null,
+      "last_status": null,
+      "last_error": null,
+      "last_delivery_error": null,
+      "deliver": "origin",
+      "enabled_toolsets": null,
+      "workdir": null
+    },
+    {
+      "name": "基金15:15信号确认",
+      "prompt": "收盘后信号确认。执行以下步骤：\n\n第一步：用收盘数据重算板块动量\n~/.hermes/venv-fund/bin/python3 ~/.hermes/scripts/sector_momentum.py\n\n第二步：生成收盘确认报告\n~/.hermes/venv-fund/bin/python3 ~/.hermes/scripts/opportunity_scan.py --confirm\n\n将脚本输出直接推送给用户。如果信号与14:20一致，简要确认即可。如果信号有变化，重点说明变化原因。",
+      "skills": [],
+      "skill": null,
+      "model": null,
+      "provider": null,
+      "provider_snapshot": "xiaomi",
+      "model_snapshot": "mimo-v2.5",
+      "base_url": null,
+      "script": "sector_momentum.py",
+      "no_agent": false,
+      "context_from": null,
+      "schedule": {
+        "kind": "cron",
+        "expr": "15 15 * * 1-5",
+        "display": "15 15 * * 1-5"
+      },
+      "schedule_display": "15 15 * * 1-5",
+      "repeat": {
+        "times": null,
+        "completed": 0
+      },
+      "enabled": true,
+      "state": "scheduled",
+      "paused_at": null,
+      "paused_reason": null,
+      "created_at": "2026-09-04T16:34:12.377452+08:00",
+      "next_run_at": "2026-09-07T15:15:00+08:00",
+      "last_run_at": null,
+      "last_status": null,
+      "last_error": null,
+      "last_delivery_error": null,
+      "deliver": "origin",
+      "enabled_toolsets": null,
+      "workdir": null
     }
   ],
-  "updated_at": "2026-09-04T14:22:14.819940+08:00"
+  "updated_at": "2026-09-04T16:34:12.426645+08:00"
 }

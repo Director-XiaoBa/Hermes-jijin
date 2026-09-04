@@ -559,7 +559,7 @@ print("\n[4/6] 拉取行业板块...")
 sector_data = []
 for attempt in range(3):
     try:
-        raw = http("https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/MoneyFlow.ssl_bkzj_bk?page=1&num=30&sort=netamount&asc=0&fenlei=1",
+        raw = http("https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/MoneyFlow.ssl_bkzj_bk?page=1&num=30&sort=netamount&asc=0&fenlei=2",
                    {"Referer": "https://finance.sina.com.cn/", "User-Agent": "Mozilla/5.0"}).decode('utf-8', 'ignore')
         items = json.loads(raw)
         if isinstance(items, list):
@@ -840,7 +840,7 @@ def fetch_with_retry(url, max_retries=3, delay=2):
 
 # 1. 板块资金流向（新浪API，东财push2已封）
 try:
-    flow_url = "https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/MoneyFlow.ssl_bkzj_bk?page=1&num=50&sort=netamount&asc=0&fenlei=1"
+    flow_url = "https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/MoneyFlow.ssl_bkzj_bk?page=1&num=50&sort=netamount&asc=0&fenlei=2"
     flow_raw = fetch_with_retry(flow_url)
     
     if flow_raw:
@@ -879,6 +879,42 @@ try:
                 flow_count += 1
             except:
                 continue
+        
+        # 1b. 概念板块资金流向（新浪API fenlei=1）
+        try:
+            concept_url = "https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/MoneyFlow.ssl_bkzj_bk?page=1&num=50&sort=netamount&asc=0&fenlei=1"
+            concept_raw = fetch_with_retry(concept_url)
+            if concept_raw and isinstance(concept_raw, list):
+                for item in concept_raw:
+                    try:
+                        sector_name = item.get('name', '')
+                        netamount = float(item.get('netamount', 0)) / 1e8 if item.get('netamount') else 0
+                        if not sector_name:
+                            continue
+                        inamount = max(0, netamount)
+                        outamount = max(0, -netamount)
+                        concept_sql = """INSERT INTO concept_flow_daily 
+                            (trade_date, sector_name, netamount, inamount, outamount,
+                             avg_price, avg_changeratio, turnover, leader_stock)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                            ON DUPLICATE KEY UPDATE
+                                netamount=VALUES(netamount), inamount=VALUES(inamount),
+                                outamount=VALUES(outamount), avg_price=VALUES(avg_price),
+                                avg_changeratio=VALUES(avg_changeratio), turnover=VALUES(turnover),
+                                leader_stock=VALUES(leader_stock)"""
+                        flow_cursor.execute(concept_sql, (
+                            today, sector_name,
+                            round(netamount, 2), round(inamount, 2), round(outamount, 2),
+                            float(item.get('avg_price', 0) or 0),
+                            float(item.get('avg_changeratio', 0) or 0) * 100,
+                            float(item.get('turnover', 0) or 0),
+                            item.get('ts_name', '')
+                        ))
+                    except:
+                        continue
+                print(f"  概念板块: {len(concept_raw)}条入库")
+        except Exception as e:
+            print(f"  概念板块采集失败: {e}")
         
         # 2. 北向资金（东财数据中心API）
         try:
