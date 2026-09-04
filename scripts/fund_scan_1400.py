@@ -103,11 +103,11 @@ def main():
         with open(llm_input_path, encoding='utf-8') as f:
             llm_input = f.read()
 
-    # 输出：先输出LLM分析输入（agent直接读），再输出JSON
+    # 输出：只输出LLM分析输入（agent直接读）
+    # 数据部分已由fund_report_data.py写入report_data.md，agent自行读取
     print("=== LLM分析输入 ===")
     print(llm_input)
-    print("\n=== 原始数据JSON ===")
-    print(json.dumps(output, ensure_ascii=False, indent=2))
+    print("\n=== 数据报告已生成: /tmp/fund_data/report_data.md ===")
 
 if __name__ == "__main__":
     main()
